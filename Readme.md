@@ -16,9 +16,9 @@ store with encryption support using AES-CBC with PKCS7 padding.
 The project is organized using Clean Architecture principles:
 
 - `KeystoreDB.Core`: Contains the core business logic and interfaces
-- `KeystoreDB.Infrastructure`: Implements the interfaces defined in the Core project
+- `KeystoreDB`: Main project which implements the interfaces defined in the Core project
 - `KeystoreDB.Core.Tests`: Contains unit tests for the Core project
-- `KeystoreDB.Infrastructure.Tests`: Contains unit tests for the Infrastructure project
+- `KeystoreDB.Tests`: Contains unit tests for the Main project
 
 ## Getting Started
 
