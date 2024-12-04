@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Text.Json;
 using KeystoreDB.Core.Exceptions;
 using KeystoreDB.Core.Interfaces;
@@ -9,10 +10,11 @@ public class DatabaseService : IDatabaseService
 {
     private readonly string _dbPath;
     private readonly IEncryptionService _encryptionService;
+    private readonly object _fileLock = new();
     private readonly IFileService _fileService;
     private readonly ILogger _logger;
     private readonly string _password;
-    private Dictionary<string, string> _data;
+    private ConcurrentDictionary<string, string> _data;
 
     public DatabaseService(string dbPath, string password, IEncryptionService encryptionService,
         IFileService fileService, ILogger logger)
@@ -22,7 +24,7 @@ public class DatabaseService : IDatabaseService
         _encryptionService = encryptionService;
         _fileService = fileService;
         _logger = logger;
-        _data = new Dictionary<string, string>();
+        _data = new ConcurrentDictionary<string, string>();
 
         Load();
     }
@@ -47,7 +49,7 @@ public class DatabaseService : IDatabaseService
 
     public bool Delete(string key)
     {
-        if (_data.Remove(key))
+        if (_data.TryRemove(key, out _))
         {
             _logger.LogInfo($"Deleted key: {key}");
             return true;
@@ -59,62 +61,69 @@ public class DatabaseService : IDatabaseService
 
     public void Save()
     {
-        try
+        lock (_fileLock)
         {
-            var json = JsonSerializer.Serialize(_data);
-            var encryptedData = _encryptionService.Encrypt(json, _password);
-            _fileService.WriteAllString(_dbPath, encryptedData);
-            _logger.LogInfo("Database saved successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error saving database", ex);
-            throw new KeystoreDBException("Failed to save database", ex);
+            try
+            {
+                var json = JsonSerializer.Serialize(_data);
+                var encryptedData = _encryptionService.Encrypt(json, _password);
+                _fileService.WriteAllString(_dbPath, encryptedData);
+                _logger.LogInfo("Database saved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error saving database", ex);
+                throw new KeystoreDBException("Failed to save database", ex);
+            }
         }
     }
 
-    private void Load()
+    public void Load()
     {
-        try
+        lock (_fileLock)
         {
-            _logger.LogInfo($"Attempting to load database from: {_dbPath}");
-
-            if (_fileService.Exists(_dbPath))
+            try
             {
-                _logger.LogInfo("Database file found. Loading data...");
-                var encryptedData = _fileService.ReadAllString(_dbPath);
-                _logger.LogInfo($"Read {encryptedData.Length} bytes from file.");
+                _logger.LogInfo($"Attempting to load database from: {_dbPath}");
 
-                try
+                if (_fileService.Exists(_dbPath))
                 {
-                    var json = _encryptionService.Decrypt(encryptedData, _password);
-                    _logger.LogInfo("Decryption successful. Attempting to deserialize...");
+                    _logger.LogInfo("Database file found. Loading data...");
+                    var encryptedData = _fileService.ReadAllString(_dbPath);
+                    _logger.LogInfo($"Read {encryptedData.Length} bytes from file.");
 
-                    _data = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                    try
+                    {
+                        var json = _encryptionService.Decrypt(encryptedData, _password);
+                        _logger.LogInfo("Decryption successful. Attempting to deserialize...");
 
-                    _logger.LogInfo($"Database loaded successfully. {_data.Count} entries found.");
+                        var data = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                        _data = new ConcurrentDictionary<string, string>(data);
+
+                        _logger.LogInfo($"Database loaded successfully. {_data.Count} entries found.");
+                    }
+                    catch (CryptographicException cryptoEx)
+                    {
+                        _logger.LogError($"Decryption failed: {cryptoEx.Message}", cryptoEx);
+                        _data = new ConcurrentDictionary<string, string>();
+                    }
+                    catch (JsonException jsonEx)
+                    {
+                        _logger.LogError($"Deserialization failed: {jsonEx.Message}", jsonEx);
+                        _data = new ConcurrentDictionary<string, string>();
+                    }
                 }
-                catch (CryptographicException cryptoEx)
+                else
                 {
-                    _logger.LogError($"Decryption failed: {cryptoEx.Message}", cryptoEx);
-                    _data = new Dictionary<string, string>();
-                }
-                catch (JsonException jsonEx)
-                {
-                    _logger.LogError($"Deserialization failed: {jsonEx.Message}", jsonEx);
-                    _data = new Dictionary<string, string>();
+                    _logger.LogInfo("No existing database file found. Initializing empty database.");
+                    _data = new ConcurrentDictionary<string, string>();
                 }
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogInfo("No existing database file found. Initializing empty database.");
-                _data = new Dictionary<string, string>();
+                _logger.LogError($"Error loading database: {ex.Message}", ex);
+                _data = new ConcurrentDictionary<string, string>();
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error loading database: {ex.Message}", ex);
-            _data = new Dictionary<string, string>();
         }
     }
 }
