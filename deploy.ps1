@@ -1,8 +1,9 @@
 # Set the project directory
 $projectDir = "D:\Programming\.NET\KeystoreDB"
 
-# Set the project name
-$projectName = "KeystoreDB.Infrastructure"
+# Set the project name and package name
+$projectName = "KeystoreDB"
+$packageName = "KeystoreDB"
 
 # Set the output directory for the NuGet package
 $outputDir = "$projectDir\nupkg"
@@ -20,25 +21,55 @@ Remove-Item -Path "$outputDir\*.nupkg" -Force
 Write-Host "Building the project..."
 dotnet build "$projectDir\$projectName\$projectName.csproj" -c Release
 
-# Get the current version from the project file
+# Get and update the version
 $projectFile = "$projectDir\$projectName\$projectName.csproj"
-$xml = [xml](Get-Content $projectFile)
-$currentVersion = $xml.Project.PropertyGroup.Version
 
-# Increment the version
-$versionParts = $currentVersion -split '\.'
-$newVersion = "{0}.{1}.{2}" -f $versionParts[0], $versionParts[1], ([int]$versionParts[2] + 1)
+# Check if the file exists
+if (Test-Path $projectFile) {
+    # Read the content of the project file
+    $xmlContent = Get-Content $projectFile -Raw
+    
+    # Parse the XML content
+    $xml = [xml]$xmlContent
+    
+    # Find the Version element across all PropertyGroups
+    $versionElement = $xml.Project.PropertyGroup | 
+                      Where-Object { $_.Version } | 
+                      Select-Object -First 1
 
-# Update the version in the project file
-$xml.Project.PropertyGroup.Version = $newVersion
-$xml.Save($projectFile)
+    if ($versionElement) {
+        $currentVersion = [Version]$versionElement.Version
+        Write-Host "Current version: $currentVersion"
 
-# Create the NuGet package with the new version
-Write-Host "Creating NuGet package with version $newVersion..."
-dotnet pack "$projectDir\$projectName\$projectName.csproj" -c Release -o $outputDir
+        # Increment the minor version
+        $newVersion = New-Object Version $currentVersion.Major, ($currentVersion.Minor + 1), 0
+
+        # Update the Version element
+        $versionElement.Version = $newVersion.ToString()
+
+        # Save the changes back to the file
+        $xml.Save($projectFile)
+
+        Write-Host "Version updated to: $newVersion"
+    } else {
+        Write-Host "Version element not found in any PropertyGroup."
+        
+        # Display all PropertyGroups for debugging
+        Write-Host "All PropertyGroups:"
+        $xml.Project.PropertyGroup | ForEach-Object {
+            Write-Host ($_.OuterXml)
+        }
+    }
+} else {
+    Write-Host "Project file not found at path: $projectFile"
+}
+
+# Create the NuGet package
+Write-Host "Creating NuGet package "
+dotnet pack "$projectDir\$projectName\$projectName.csproj" -c Release -o $outputDir 
 
 # Get the created package file
-$packageFile = Get-ChildItem -Path $outputDir -Filter "*.nupkg" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$packageFile = Get-ChildItem -Path $outputDir -Filter "$packageName.*.nupkg" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if ($packageFile) {
     Write-Host "NuGet package created successfully: $($packageFile.FullName)"

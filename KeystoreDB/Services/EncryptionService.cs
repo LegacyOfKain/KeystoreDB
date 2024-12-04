@@ -2,7 +2,7 @@
 using System.Text;
 using KeystoreDB.Core.Interfaces;
 
-namespace KeystoreDB.Infrastructure.Services;
+namespace KeystoreDB.Services;
 
 public class EncryptionService : IEncryptionService
 {

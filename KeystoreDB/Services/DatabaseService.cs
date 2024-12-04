@@ -3,7 +3,7 @@ using System.Text.Json;
 using KeystoreDB.Core.Exceptions;
 using KeystoreDB.Core.Interfaces;
 
-namespace KeystoreDB.Infrastructure.Services;
+namespace KeystoreDB.Services;
 
 public class DatabaseService : IDatabaseService
 {

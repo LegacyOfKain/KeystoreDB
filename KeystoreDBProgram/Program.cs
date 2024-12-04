@@ -1,5 +1,5 @@
 ﻿using KeystoreDB.Core.Interfaces;
-using KeystoreDB.Infrastructure.Services;
+using KeystoreDB.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace KeystoreDBProgram;

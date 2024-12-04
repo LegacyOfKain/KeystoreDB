@@ -1,6 +1,6 @@
 ﻿using KeystoreDB.Core.Interfaces;
 
-namespace KeystoreDB.Infrastructure.Services
+namespace KeystoreDB.Services
 {
     public class ConsoleLogger : ILogger
     {
