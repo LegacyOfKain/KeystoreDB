@@ -6,7 +6,7 @@ store with encryption support using AES-CBC with PKCS7 padding.
 ## Features
 
 - Simple key-value store
-- AES-CBC encryption with PKCS7 padding
+- AES encryption
 - Persistent storage
 - Thread safe
 - Clean Architecture design
