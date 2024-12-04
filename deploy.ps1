@@ -42,7 +42,18 @@ if (Test-Path $projectFile) {
         Write-Host "Current version: $currentVersion"
 
         # Increment the minor version
-        $newVersion = New-Object Version $currentVersion.Major, ($currentVersion.Minor + 1), 0
+		# $newVersion = New-Object Version $currentVersion.Major, ($currentVersion.Minor + 1), 0
+		$currentVersionParts = $versionElement.Version.Split('.')
+        $currentPatch = [int]$currentVersionParts[2]
+
+        Write-Host "Current Patch: $currentPatch"
+
+        # Increment the patch version
+        $newPatchVersion = $currentPatch + 1
+		Write-Host "New Patch version: $newPatchVersion"
+
+        $newVersion = New-Object Version $currentVersion.Major, $currentVersion.Minor, $newPatchVersion
+		Write-Host "New version: $newVersion"
 
         # Update the Version element
         $versionElement.Version = $newVersion.ToString()
