@@ -10,6 +10,7 @@ store with encryption support.
 - Persistent storage
 - Thread safe
 - Clean Architecture design
+- 100% Code Coverage
 
 ## Project Structure
 
