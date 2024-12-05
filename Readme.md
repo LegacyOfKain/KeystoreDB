@@ -1,7 +1,7 @@
 # KeystoreDB
 
 KeystoreDB is a lightweight, secure NoSQL persistent database engine implemented in C#. It provides a simple key-value
-store with encryption support using AES-CBC with PKCS7 padding.
+store with encryption support.
 
 ## Features
 
