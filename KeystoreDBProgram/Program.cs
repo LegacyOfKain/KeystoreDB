@@ -13,6 +13,7 @@ public class Program
 
         var serviceProvider = services.BuildServiceProvider();
         var database = serviceProvider.GetRequiredService<IDatabaseService>();
+        database.Load();
 
         // Example usage
         Console.WriteLine(database.Get("key1")); // Outputs: value1

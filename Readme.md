@@ -38,7 +38,8 @@ var password = "your_secure_password";
 var encryptionService = new EncryptionService();
 var fileService = new FileService();
 var logger = new ConsoleLogger(); // Add this line
-var databaseService = new DatabaseService(dbPath, password, encryptionService, fileService, logger);
+var databaseService = new DatabaseService(dbPath, password, logger);
+databaseService.Load(); // Load the database from the file if it exists, or initialize an empty database if not found
 
 // Set a value
 databaseService.Set("myKey", "myValue");

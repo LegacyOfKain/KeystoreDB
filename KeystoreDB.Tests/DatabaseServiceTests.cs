@@ -39,6 +39,27 @@ public class DatabaseServiceTests : IDisposable
         if (File.Exists(_tempDbPath)) File.Delete(_tempDbPath);
     }
 
+
+    [Fact]
+    public void Ctor_ShouldInitializeProperties()
+    {
+        // Arrange
+        var dbPath = "test_db_path";
+        var password = "test_password";
+        var mockLogger = A.Fake<ILogger>();
+
+        // Act
+        var databaseService = new DatabaseService(dbPath, password, mockLogger);
+
+        // Assert
+        databaseService._dbPath.Should().Be(dbPath);
+        databaseService._password.Should().Be(password);
+        databaseService._logger.Should().Be(mockLogger);
+        databaseService._encryptionService.Should().NotBeNull();
+        databaseService._fileService.Should().NotBeNull();
+        databaseService._data.Should().NotBeNull();
+    }
+
     [Fact]
     public void SetAndGet_ShouldReturnSameValue()
     {
@@ -69,6 +90,30 @@ public class DatabaseServiceTests : IDisposable
         // Assert
         Assert.True(deleteResult);
         Assert.Null(retrievedValue);
+    }
+
+    [Fact]
+    public void Load_WithInvalidJson_ShouldLogDeserializationError()
+    {
+        // Arrange
+        var password = "test_password";
+        var encryptionService = new EncryptionService();
+        var fileService = new FileService();
+        var logger = new MockLogger();
+
+        // Write invalid JSON data to the file
+        var invalidJson = "Invalid JSON data";
+        var encryptedInvalidJson = encryptionService.Encrypt(invalidJson, password);
+        fileService.WriteAllString(_tempDbPath, encryptedInvalidJson);
+
+        var databaseService = new DatabaseService(_tempDbPath, password, encryptionService, fileService, logger);
+
+        // Act
+        databaseService.Load();
+
+        // Assert
+        Assert.Single(logger.LoggedErrors);
+        Assert.Contains("Deserialization failed", logger.LoggedErrors[0]);
     }
 
     [Fact]

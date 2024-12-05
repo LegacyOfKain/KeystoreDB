@@ -8,13 +8,26 @@ namespace KeystoreDB.Services;
 
 public class DatabaseService : IDatabaseService
 {
-    private readonly string _dbPath;
-    private readonly IEncryptionService _encryptionService;
-    private readonly object _fileLock = new();
-    private readonly IFileService _fileService;
-    private readonly ILogger _logger;
-    private readonly string _password;
-    private ConcurrentDictionary<string, string> _data;
+    internal readonly string _dbPath;
+    internal readonly object _fileLock = new();
+    internal readonly ILogger _logger;
+    internal readonly string _password;
+    internal ConcurrentDictionary<string, string> _data;
+    internal IEncryptionService _encryptionService;
+    internal IFileService _fileService;
+
+    // Constructor with only dbPath, password, and ILogger as parameters
+    public DatabaseService(string dbPath, string password, ILogger logger)
+    {
+        _dbPath = dbPath;
+        _password = password;
+        _logger = logger;
+
+        // Inject IEncryptionService and IFileService using a separate method or property
+        InjectDependencies();
+
+        _data = new ConcurrentDictionary<string, string>();
+    }
 
     public DatabaseService(string dbPath, string password, IEncryptionService encryptionService,
         IFileService fileService, ILogger logger)
@@ -25,8 +38,6 @@ public class DatabaseService : IDatabaseService
         _fileService = fileService;
         _logger = logger;
         _data = new ConcurrentDictionary<string, string>();
-
-        Load();
     }
 
     public void Set(string key, string value)
@@ -125,5 +136,12 @@ public class DatabaseService : IDatabaseService
                 _data = new ConcurrentDictionary<string, string>();
             }
         }
+    }
+
+    // Separate method to inject dependencies
+    private void InjectDependencies()
+    {
+        _encryptionService = new EncryptionService(); // Replace with actual instantiation
+        _fileService = new FileService(); // Replace with actual instantiation
     }
 }
